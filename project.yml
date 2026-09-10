@@ -1,0 +1,40 @@
+name: mStats
+options:
+  bundleIdPrefix: com.hartono
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+packages:
+  mStatsKit:
+    path: Packages/mStatsKit
+targets:
+  mStats:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/mStatsApp
+        excludes:
+          - "Info.plist"
+          - "mStats.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hartono.mStats
+        PRODUCT_NAME: mStats
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        SWIFT_VERSION: "6.0"
+        INFOPLIST_FILE: Sources/mStatsApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/mStatsApp/mStats.entitlements
+        CODE_SIGN_IDENTITY: ""
+        CODE_SIGNING_REQUIRED: "NO"
+        CODE_SIGNING_ALLOWED: "NO"
+        ENABLE_HARDENED_RUNTIME: "NO"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: "NO"
+        SWIFT_STRICT_CONCURRENCY: complete
+    dependencies:
+      - package: mStatsKit
+        product: mStatsKit
