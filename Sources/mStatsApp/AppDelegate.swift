@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let networkViewModel = NetworkViewModel(settings: AppSettings.shared)
     private let sensorsViewModel = SensorsViewModel(settings: AppSettings.shared)
     private let batteryViewModel = BatteryViewModel(settings: AppSettings.shared)
+    private let portsViewModel = PortsViewModel(settings: AppSettings.shared)
 
     private var cpuItem: ModuleStatusItemController<CPUMenuBarLabel>?
     private var memoryItem: ModuleStatusItemController<MemoryMenuBarLabel>?
@@ -19,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var networkItem: ModuleStatusItemController<NetworkMenuBarLabel>?
     private var sensorsItem: ModuleStatusItemController<SensorsMenuBarLabel>?
     private var batteryItem: ModuleStatusItemController<BatteryMenuBarLabel>?
+    private var portsItem: ModuleStatusItemController<PortsMenuBarLabel>?
 
     private var preferencesWindowController: PreferencesWindowController?
 
@@ -99,6 +101,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 labelBuilder: { BatteryMenuBarLabel(viewModel: self.batteryViewModel) },
                 content: AnyView(BatteryCardView(viewModel: batteryViewModel).environment(settings)),
                 refreshInterval: { self.settings.batteryPollInterval }
+            )
+        }
+
+        syncItem(enabled: settings.portsEnabled, existing: &portsItem) { [self] in
+            portsViewModel.start()
+            return ModuleStatusItemController(
+                labelBuilder: { PortsMenuBarLabel(viewModel: self.portsViewModel) },
+                content: AnyView(PortsCardView(viewModel: portsViewModel).environment(settings)),
+                refreshInterval: { self.settings.portsPollInterval }
             )
         }
     }

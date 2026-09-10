@@ -16,6 +16,7 @@ public struct PreferencesView: View {
                 Toggle("Network", isOn: $settings.networkEnabled)
                 Toggle("Sensors & Fans", isOn: $settings.sensorsEnabled)
                 Toggle("Battery", isOn: $settings.batteryEnabled)
+                Toggle("Ports", isOn: $settings.portsEnabled)
             }
 
             Section("Network") {
