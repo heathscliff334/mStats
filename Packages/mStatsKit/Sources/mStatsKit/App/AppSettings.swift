@@ -56,6 +56,17 @@ public final class AppSettings {
     public var sensorsEnabled: Bool { didSet { defaults.set(sensorsEnabled, forKey: Key.sensorsEnabled) } }
     public var batteryEnabled: Bool { didSet { defaults.set(batteryEnabled, forKey: Key.batteryEnabled) } }
     public var portsEnabled: Bool { didSet { defaults.set(portsEnabled, forKey: Key.portsEnabled) } }
+    /// Docker's menu bar icon only appears when this is true AND the daemon
+    /// is actually detected running (see DockerViewModel.isRunning) — this
+    /// flag alone is an opt-out, not a guarantee the icon will show.
+    public var dockerEnabled: Bool { didSet { defaults.set(dockerEnabled, forKey: Key.dockerEnabled) } }
+    /// Off by default: continuously captures clipboard text (in-memory,
+    /// session-only — see ClipboardViewModel), even with privacy exclusions.
+    public var clipboardEnabled: Bool { didSet { defaults.set(clipboardEnabled, forKey: Key.clipboardEnabled) } }
+
+    /// When true, all enabled modules share a single overview menu bar icon
+    /// (switched via tabs) instead of each getting its own status item.
+    public var combinedIconEnabled: Bool { didSet { defaults.set(combinedIconEnabled, forKey: Key.combinedIconEnabled) } }
 
     public var cpuPollInterval: Double { didSet { defaults.set(cpuPollInterval, forKey: Key.cpuPollInterval) } }
     public var memoryPollInterval: Double { didSet { defaults.set(memoryPollInterval, forKey: Key.memoryPollInterval) } }
@@ -64,6 +75,7 @@ public final class AppSettings {
     public var sensorsPollInterval: Double { didSet { defaults.set(sensorsPollInterval, forKey: Key.sensorsPollInterval) } }
     public var batteryPollInterval: Double { didSet { defaults.set(batteryPollInterval, forKey: Key.batteryPollInterval) } }
     public var portsPollInterval: Double { didSet { defaults.set(portsPollInterval, forKey: Key.portsPollInterval) } }
+    public var dockerPollInterval: Double { didSet { defaults.set(dockerPollInterval, forKey: Key.dockerPollInterval) } }
 
     /// Off by default: enabling this makes an outbound HTTPS call to a
     /// third-party IP-lookup service. Surfaced explicitly in Preferences.
@@ -93,6 +105,9 @@ public final class AppSettings {
         static let sensorsEnabled = "sensorsEnabled"
         static let batteryEnabled = "batteryEnabled"
         static let portsEnabled = "portsEnabled"
+        static let dockerEnabled = "dockerEnabled"
+        static let clipboardEnabled = "clipboardEnabled"
+        static let combinedIconEnabled = "combinedIconEnabled"
         static let cpuPollInterval = "cpuPollInterval"
         static let memoryPollInterval = "memoryPollInterval"
         static let diskPollInterval = "diskPollInterval"
@@ -100,6 +115,7 @@ public final class AppSettings {
         static let sensorsPollInterval = "sensorsPollInterval"
         static let batteryPollInterval = "batteryPollInterval"
         static let portsPollInterval = "portsPollInterval"
+        static let dockerPollInterval = "dockerPollInterval"
         static let publicIPEnabled = "publicIPEnabled"
         static let publicIPPollInterval = "publicIPPollInterval"
         static let temperatureUnit = "temperatureUnit"
@@ -124,6 +140,9 @@ public final class AppSettings {
         sensorsEnabled = bool(Key.sensorsEnabled, default: true)
         batteryEnabled = bool(Key.batteryEnabled, default: true)
         portsEnabled = bool(Key.portsEnabled, default: true)
+        dockerEnabled = bool(Key.dockerEnabled, default: true)
+        clipboardEnabled = bool(Key.clipboardEnabled, default: false)
+        combinedIconEnabled = bool(Key.combinedIconEnabled, default: false)
 
         cpuPollInterval = double(Key.cpuPollInterval, default: 1.0)
         memoryPollInterval = double(Key.memoryPollInterval, default: 2.0)
@@ -132,6 +151,7 @@ public final class AppSettings {
         sensorsPollInterval = double(Key.sensorsPollInterval, default: 3.0)
         batteryPollInterval = double(Key.batteryPollInterval, default: 5.0)
         portsPollInterval = double(Key.portsPollInterval, default: 4.0)
+        dockerPollInterval = double(Key.dockerPollInterval, default: 5.0)
 
         publicIPEnabled = bool(Key.publicIPEnabled, default: false)
         publicIPPollInterval = double(Key.publicIPPollInterval, default: 300.0)

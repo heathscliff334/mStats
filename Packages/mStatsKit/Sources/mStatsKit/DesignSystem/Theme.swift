@@ -25,6 +25,7 @@ public enum Theme {
     public static let ringTrack = Color.white.opacity(0.1)
     public static let warning = Color(red: 0.95, green: 0.75, blue: 0.25)
     public static let critical = Color(red: 0.95, green: 0.30, blue: 0.35)
+    public static let success = Color(red: 0.35, green: 0.80, blue: 0.45)
 
     public static let cardWidth: CGFloat = 260
     public static let cardSpacing: CGFloat = 12

@@ -114,12 +114,13 @@ public struct PortsCardView: View {
     }
 
     private func row(for entry: PortEntry) -> some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 2) {
+        HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Text(entry.processName)
                         .font(Typography.legendValue)
                         .foregroundStyle(Theme.primaryText)
+                        .lineLimit(1)
                     if entry.isDevPort {
                         Text("DEV")
                             .font(.system(size: 9, weight: .bold))
@@ -134,16 +135,29 @@ public struct PortsCardView: View {
                     .font(Typography.caption)
                     .foregroundStyle(Theme.secondaryText)
             }
-            Spacer(minLength: 8)
-            Menu {
-                Button("Stop") { pendingAction = PendingAction(entry: entry, isForceKill: false) }
-                Button("Force Kill", role: .destructive) { pendingAction = PendingAction(entry: entry, isForceKill: true) }
-            } label: {
-                Image(systemName: "ellipsis.circle")
-                    .foregroundStyle(Theme.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(spacing: 4) {
+                actionIconButton(systemImage: "stop.fill", tint: Theme.warning, help: "Stop (SIGTERM)") {
+                    pendingAction = PendingAction(entry: entry, isForceKill: false)
+                }
+                actionIconButton(systemImage: "xmark.octagon.fill", tint: Theme.critical, help: "Force Kill (SIGKILL)") {
+                    pendingAction = PendingAction(entry: entry, isForceKill: true)
+                }
             }
-            .menuStyle(.borderlessButton)
-            .frame(width: 20)
         }
+    }
+
+    private func actionIconButton(systemImage: String, tint: Color, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 22, height: 22)
+                .background(tint.opacity(0.18))
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
+        .help(help)
     }
 }

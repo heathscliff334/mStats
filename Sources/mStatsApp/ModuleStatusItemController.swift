@@ -46,6 +46,14 @@ final class ModuleStatusItemController<Label: View> {
         NSStatusBar.system.removeStatusItem(statusItem)
     }
 
+    /// Opens (or closes, if already open) this item's popover exactly as a
+    /// left-click would — the entry point for triggering it programmatically,
+    /// e.g. from a global keyboard shortcut rather than an actual click.
+    func show() {
+        guard let button = statusItem.button else { return }
+        MenuBarPanelCoordinator.shared.toggle(popover, relativeTo: button)
+    }
+
     @objc private func handleClick(_ sender: Any?) {
         guard let button = statusItem.button else { return }
         if NSApp.currentEvent?.type == .rightMouseUp {

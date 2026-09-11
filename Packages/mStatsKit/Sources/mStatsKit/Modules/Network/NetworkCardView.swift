@@ -43,7 +43,7 @@ public struct NetworkCardView: View {
             if !viewModel.snapshot.localIPAddresses.isEmpty {
                 Text("Local IP Addresses").sectionLabelStyle()
                 ForEach(viewModel.snapshot.localIPAddresses, id: \.self) { ip in
-                    Text(ip).font(Typography.legendValue).foregroundStyle(Theme.primaryText)
+                    CopyableValueRow(value: ip)
                 }
             }
 
@@ -51,7 +51,7 @@ public struct NetworkCardView: View {
                 Divider().overlay(Theme.cardBorder)
                 Text("Public IP Address").sectionLabelStyle()
                 if let publicIP = viewModel.publicIPAddress {
-                    Text(publicIP).font(Typography.legendValue).foregroundStyle(Theme.primaryText)
+                    CopyableValueRow(value: publicIP)
                 } else {
                     UnavailableStateView(reason: "Looking up…")
                 }
