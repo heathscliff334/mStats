@@ -2,16 +2,31 @@
 
 A native macOS menu bar system monitor, inspired by [iStat Menus](https://bjango.com/mac/istatmenus/). Each enabled module gets its own live-updating menu bar icon; clicking it opens a dark, card-based dropdown with the full detail.
 
-<p align="center"><em>Screenshots coming soon</em></p>
+<p align="center"><img src="assets/menu-bar.png" alt="mStats menu bar icons"></p>
 
-## Features (MVP)
+## Features
 
-- **CPU** — user/system usage, efficiency vs. performance core split (Apple Silicon), top processes.
-- **Memory** — App / Wired / Compressed / Cached Files / Free breakdown, memory pressure, swap, top processes.
-- **Disk** — per-volume free/used space, live read/write throughput, top processes by disk I/O.
-- **Network** — live upload/download throughput, connection type, optional public IP lookup (off by default).
-- **Sensors** — CPU/GPU/battery temperature, fan RPM (via SMC).
-- **Battery** — charge %, health %, cycle count, time remaining.
+- 🧠 **CPU** — user/system usage, efficiency vs. performance core split (Apple Silicon), top processes.
+- 🧮 **Memory** — App / Wired / Compressed / Cached Files / Free breakdown, memory pressure, swap, top processes.
+- 💾 **Disk** — per-volume free/used space, live read/write throughput, top processes by disk I/O.
+- 🌐 **Network** — live upload/download throughput, connection type, optional public IP lookup (off by default).
+- 🌡️ **Sensors** — CPU/GPU/battery temperature, fan RPM (via SMC).
+- 🔋 **Battery** — charge %, health %, cycle count, time remaining.
+- 🔌 **Ports** — listening TCP/UDP ports with process/PID, search by name or port, stop (SIGTERM) or force-kill (SIGKILL).
+- 🐳 **Docker** — running/stopped containers with live CPU & memory, start/stop/restart, auto-detects whether the daemon is running.
+- 📋 **Clipboard History** — recent copies with one-click copy-back, global `⌘⇧V` shortcut, and automatic skipping of password-manager/concealed items.
+- 🧩 **Combined icon mode** — collapse every module into a single tabbed menu bar icon instead of one per module.
+
+## Screenshots
+
+<p align="center">
+  <img src="assets/memory.png" width="32%" alt="Memory card">
+  <img src="assets/disk.png" width="32%" alt="Disk card">
+  <img src="assets/ports.png" width="32%" alt="Ports card">
+</p>
+<p align="center">
+  <img src="assets/clipboard.png" width="32%" alt="Clipboard History card">
+</p>
 
 ## Requirements
 
@@ -52,7 +67,7 @@ See [`PRD/PRD.md`](PRD/PRD.md) for the full product spec, architecture notes, an
 
 ## Status
 
-Early development. The MVP system modules (CPU/Memory/Disk/Network/Sensors/Battery) are functional. Clock, Weather, and Calendar modules, code signing/notarization, and Mac App Store distribution are not yet implemented.
+Early development. All modules above (CPU/Memory/Disk/Network/Sensors/Battery/Ports/Docker/Clipboard History) are functional. Clock, Weather, and Calendar modules, code signing/notarization, and Mac App Store distribution are not yet implemented.
 
 ## License
 
