@@ -9,15 +9,16 @@ mStats is a native macOS menu bar system monitor (SwiftUI + AppKit), inspired by
 ## Commands
 
 ```bash
-# Regenerate mStats.xcodeproj after editing project.yml or adding/removing files
+# Build the app (regenerates mStats.xcodeproj via xcodegen, then xcodebuild).
+# See build.sh --help for --release / --run / --clean.
 brew install xcodegen   # one-time
+./build.sh --run
+
+# Equivalent manual build, if not using the script:
 xcodegen generate
-
-# Build the app
 xcodebuild -project mStats.xcodeproj -scheme mStats -configuration Debug \
+  -derivedDataPath build \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
-
-# Run it
 open build/Build/Products/Debug/mStats.app
 
 # Run all unit tests (Swift Testing framework, not XCTest)

@@ -37,8 +37,23 @@ A native macOS menu bar system monitor, inspired by [iStat Menus](https://bjango
 
 ```bash
 brew install xcodegen   # one-time
+./build.sh --run
+```
+
+`build.sh` regenerates `mStats.xcodeproj` from `project.yml` and builds it unsigned (no Apple Developer enrollment yet — see [`PRD/PRD.md`](PRD/PRD.md) §10). Options:
+
+| Flag | Effect |
+|---|---|
+| `--release` | Build the Release configuration instead of Debug |
+| `--run` | Open the built `.app` once the build succeeds |
+| `--clean` | Remove `./build` before building |
+
+The equivalent manual commands, if you'd rather not use the script:
+
+```bash
 xcodegen generate
 xcodebuild -project mStats.xcodeproj -scheme mStats -configuration Debug \
+  -derivedDataPath build \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
 open build/Build/Products/Debug/mStats.app
 ```
@@ -53,6 +68,7 @@ cd Packages/mStatsKit && swift test
 
 ```
 mStats/
+├── build.sh                    # xcodegen + xcodebuild wrapper (see Building)
 ├── project.yml                 # xcodegen project definition
 ├── Sources/mStatsApp/          # thin app target (menu bar shell, entitlements)
 └── Packages/mStatsKit/         # all app logic as a local Swift package
