@@ -37,6 +37,46 @@ import Foundation
         #expect(settings.byteRateUnit == .bytesPerSecond)
     }
 
+    @Test func gazeFocusIsOffByDefaultWithDocumentedValues() {
+        let settings = AppSettings(defaults: freshDefaults())
+        #expect(settings.gazeFocusEnabled == false)
+        #expect(settings.gazeFocusDwellMs == 300)
+        #expect(settings.gazeFocusTypingGuardMs == 1000)
+        #expect(settings.gazeFocusMovePointer == false)
+        #expect(settings.gazeFocusPauseOnLowPower == true)
+        #expect(settings.gazeFocusMinConfidence == 0.2)
+        #expect(settings.gazeFocusCalibrationData == nil)
+    }
+
+    @Test func gazeFocusSettingsPersistAcrossInstances() {
+        let defaults = freshDefaults()
+        let first = AppSettings(defaults: defaults)
+        first.gazeFocusEnabled = true
+        first.gazeFocusDwellMs = 450
+        first.gazeFocusMovePointer = true
+        first.gazeFocusCalibrationData = Data([1, 2, 3])
+
+        let second = AppSettings(defaults: defaults)
+        #expect(second.gazeFocusEnabled == true)
+        #expect(second.gazeFocusDwellMs == 450)
+        #expect(second.gazeFocusMovePointer == true)
+        #expect(second.gazeFocusCalibrationData == Data([1, 2, 3]))
+
+        second.gazeFocusCalibrationData = nil
+        #expect(AppSettings(defaults: defaults).gazeFocusCalibrationData == nil)
+    }
+
+    @Test func outOfRangeGazeFocusValuesAreClamped() {
+        let defaults = freshDefaults()
+        defaults.set(99_999.0, forKey: "gazeFocusDwellMs")
+        defaults.set(0.0, forKey: "gazeFocusTypingGuardMs")
+        defaults.set(5.0, forKey: "gazeFocusMinConfidence")
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.gazeFocusDwellMs == 1500)
+        #expect(settings.gazeFocusTypingGuardMs == 200)
+        #expect(settings.gazeFocusMinConfidence == 0.8)
+    }
+
     @Test func togglingAModulePersistsAcrossInstances() {
         let defaults = freshDefaults()
         let first = AppSettings(defaults: defaults)

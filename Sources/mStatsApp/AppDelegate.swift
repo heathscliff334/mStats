@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let portsViewModel = PortsViewModel(settings: AppSettings.shared)
     private let dockerViewModel = DockerViewModel(settings: AppSettings.shared)
     private let clipboardViewModel = ClipboardViewModel(settings: AppSettings.shared)
+    private let gazeFocusViewModel = GazeFocusViewModel(settings: AppSettings.shared)
 
     private var cpuItem: ModuleStatusItemController<CPUMenuBarLabel>?
     private var memoryItem: ModuleStatusItemController<MemoryMenuBarLabel>?
@@ -27,6 +28,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var dockerItem: ModuleStatusItemController<DockerMenuBarLabel>?
     private var clipboardItem: ModuleStatusItemController<ClipboardMenuBarLabel>?
     private var combinedItem: ModuleStatusItemController<CombinedSummaryLabel>?
+    private var gazeFocusItem: ModuleStatusItemController<GazeFocusMenuBarLabel>?
+    private var gazeFocusCalibration: GazeFocusCalibrationController?
 
     /// Shared with `CombinedOverviewView` so the global Clipboard hotkey can
     /// force the panel to that tab before showing it, even though tab
@@ -47,7 +50,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
-        preferencesWindowController = PreferencesWindowController(settings: settings)
+        preferencesWindowController = PreferencesWindowController(settings: settings, gazeFocus: gazeFocusViewModel)
+
+        let calibration = GazeFocusCalibrationController(viewModel: gazeFocusViewModel)
+        gazeFocusCalibration = calibration
+        gazeFocusViewModel.onCalibrationRequested = { calibration.start() }
 
         reconcile()
         reconcileTask = Task { [weak self] in
@@ -72,6 +79,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func showPreferences() {
         preferencesWindowController?.show()
+    }
+
+    /// Quick toggle from any status item's right-click menu. Only flips the
+    /// setting; `reconcile()` starts or stops the feature, and turning it on
+    /// runs the permission flow there.
+    @objc func toggleGazeFocus() {
+        settings.gazeFocusEnabled.toggle()
     }
 
     // MARK: - Clipboard global shortcut
@@ -153,6 +167,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // because Docker Desktop happens to be closed right now.
         settings.dockerEnabled ? dockerViewModel.startPolling() : dockerViewModel.stopPolling()
         settings.clipboardEnabled ? clipboardViewModel.startPolling() : clipboardViewModel.stopPolling()
+        // start()/stop() return immediately: camera and Vision work live on
+        // the capture engine's own queues, never on this main-actor loop.
+        settings.gazeFocusEnabled ? gazeFocusViewModel.start() : gazeFocusViewModel.stop()
 
         if settings.combinedIconEnabled {
             // One shared icon; the per-module icons are torn down entirely
@@ -169,6 +186,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             teardown(&portsItem)
             teardown(&dockerItem)
             teardown(&clipboardItem)
+            teardown(&gazeFocusItem)
             return
         }
 
@@ -184,6 +202,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // one module whose menu bar presence isn't purely its own toggle.
         syncItem(enabled: settings.dockerEnabled && dockerViewModel.isRunning, existing: &dockerItem, make: makeDockerItem)
         syncItem(enabled: settings.clipboardEnabled, existing: &clipboardItem, make: makeClipboardItem)
+        syncItem(enabled: settings.gazeFocusEnabled, existing: &gazeFocusItem, make: makeGazeFocusItem)
     }
 
     private func makeCPUItem() -> ModuleStatusItemController<CPUMenuBarLabel> {
@@ -255,6 +274,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             labelBuilder: { ClipboardMenuBarLabel(viewModel: self.clipboardViewModel) },
             content: AnyView(ClipboardCardView(viewModel: clipboardViewModel).environment(settings)),
             refreshInterval: { 5 }
+        )
+    }
+
+    private func makeGazeFocusItem() -> ModuleStatusItemController<GazeFocusMenuBarLabel> {
+        ModuleStatusItemController(
+            labelBuilder: { GazeFocusMenuBarLabel(viewModel: self.gazeFocusViewModel) },
+            content: AnyView(GazeFocusCardView(viewModel: gazeFocusViewModel).environment(settings)),
+            refreshInterval: { 1 }
         )
     }
 

@@ -8,8 +8,8 @@ import mStatsKit
 /// right-click menu instead.
 @MainActor
 final class PreferencesWindowController: NSWindowController {
-    convenience init(settings: AppSettings) {
-        let hosting = NSHostingController(rootView: PreferencesView(settings: settings))
+    convenience init(settings: AppSettings, gazeFocus: GazeFocusViewModel) {
+        let hosting = NSHostingController(rootView: PreferencesView(settings: settings, gazeFocus: gazeFocus))
         let window = NSWindow(contentViewController: hosting)
         window.title = "mStats Preferences"
         window.styleMask = [.titled, .closable]

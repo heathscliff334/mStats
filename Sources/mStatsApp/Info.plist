@@ -22,6 +22,8 @@
 	<string>14.0</string>
 	<key>LSUIElement</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>mStats uses the camera only while Gaze Focus is turned on, to tell which display you are looking at. Frames are analysed in memory and are never saved or sent anywhere.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 Kevin Hartono.</string>
 	<key>NSPrincipalClass</key>

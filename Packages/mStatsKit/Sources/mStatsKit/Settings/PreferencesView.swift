@@ -2,9 +2,11 @@ import SwiftUI
 
 public struct PreferencesView: View {
     @Bindable private var settings: AppSettings
+    private let gazeFocus: GazeFocusViewModel?
 
-    public init(settings: AppSettings) {
+    public init(settings: AppSettings, gazeFocus: GazeFocusViewModel? = nil) {
         self.settings = settings
+        self.gazeFocus = gazeFocus
     }
 
     public var body: some View {
@@ -41,6 +43,10 @@ public struct PreferencesView: View {
                     .foregroundStyle(.secondary)
             }
 
+            if let gazeFocus {
+                GazeFocusPreferencesSection(settings: settings, viewModel: gazeFocus)
+            }
+
             Section("Units") {
                 Picker("Temperature", selection: $settings.temperatureUnit) {
                     Text("Celsius").tag(TemperatureUnit.celsius)
@@ -64,7 +70,74 @@ public struct PreferencesView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 420, height: 500)
+        .frame(width: 420, height: 640)
+    }
+}
+
+private struct GazeFocusPreferencesSection: View {
+    @Bindable var settings: AppSettings
+    @Bindable var viewModel: GazeFocusViewModel
+
+    var body: some View {
+        Section("Gaze Focus") {
+            Toggle("Move focus to the display I'm looking at", isOn: $settings.gazeFocusEnabled)
+            Text("Off by default. Uses the camera to tell which display you're looking at, then moves keyboard focus there after a short glance. Camera frames are processed in memory and never stored or sent.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            LabeledContent("Status", value: viewModel.snapshot.state.label)
+
+            if let issue = viewModel.permissionIssue {
+                HStack {
+                    Text("\(issue.title) access is needed. Allow mStats in System Settings, then turn this on again.")
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                    Spacer()
+                    Button("Open Settings") { NSWorkspace.shared.open(issue.settingsURL) }
+                }
+            }
+
+            if let summary = viewModel.calibrationSummary {
+                LabeledContent("Calibration", value: summary.quality)
+            } else {
+                LabeledContent("Calibration", value: "Not calibrated")
+            }
+            if let message = viewModel.calibrationMessage {
+                Text(message).font(.caption).foregroundStyle(.orange)
+            }
+            HStack {
+                Button(viewModel.calibrationSummary == nil ? "Calibrate…" : "Recalibrate…") {
+                    viewModel.requestCalibration()
+                }
+                if viewModel.calibrationSummary != nil {
+                    Button("Reset") { viewModel.resetCalibration() }
+                }
+            }
+
+            LabeledContent("Glance time") {
+                Slider(value: $settings.gazeFocusDwellMs, in: 150...800, step: 50)
+                    .frame(width: 140)
+                Text("\(Int(settings.gazeFocusDwellMs)) ms").monospacedDigit().frame(width: 60, alignment: .trailing)
+            }
+            LabeledContent("Typing guard") {
+                Slider(value: $settings.gazeFocusTypingGuardMs, in: 300...3000, step: 100)
+                    .frame(width: 140)
+                Text(String(format: "%.1f s", settings.gazeFocusTypingGuardMs / 1000))
+                    .monospacedDigit().frame(width: 60, alignment: .trailing)
+            }
+            LabeledContent("Confidence") {
+                Slider(value: $settings.gazeFocusMinConfidence, in: 0.05...0.6, step: 0.05)
+                    .frame(width: 140)
+                Text(String(format: "%.2f", settings.gazeFocusMinConfidence))
+                    .monospacedDigit().frame(width: 60, alignment: .trailing)
+            }
+            Text("Glance time is how long you must look before it switches. The typing guard stops it switching while you type. Raise confidence if it switches by mistake; lower it if it misses glances.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Toggle("Also move the pointer", isOn: $settings.gazeFocusMovePointer)
+            Toggle("Pause in Low Power Mode", isOn: $settings.gazeFocusPauseOnLowPower)
+        }
     }
 }
 

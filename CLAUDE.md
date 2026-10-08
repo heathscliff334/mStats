@@ -12,7 +12,8 @@ mStats is a native macOS menu bar system monitor (SwiftUI + AppKit), inspired by
 
 ```bash
 # Build the app (regenerates mStats.xcodeproj via xcodegen, then xcodebuild).
-# See build.sh --help for --release / --run / --clean.
+# See build.sh --help for --release / --run / --clean / --sign (stable signature
+# so Camera/Accessibility grants survive rebuilds).
 brew install xcodegen   # one-time
 ./build.sh --run
 
@@ -67,7 +68,11 @@ A `reconcile()` loop runs on a 0.5s timer and is the single source of truth for 
 
 The menu bar shell is built on raw AppKit (`NSStatusItem` + `NSPopover`, via `ModuleStatusItemController` and `MenuBarPanelCoordinator`), not SwiftUI `MenuBarExtra` — `MenuBarExtra` has no way to close one module's popover when a different module's icon is clicked, so it can't guarantee only one dropdown is ever open at once. `mStatsApp`'s `Settings` scene is never shown; Preferences is opened via `AppDelegate.showPreferences()` from a status item's right-click menu.
 
-Clipboard History has a global ⌘⇧V shortcut registered via Carbon's `RegisterEventHotKey`, deliberately not `NSEvent.addGlobalMonitor` — Carbon hotkeys don't trigger the Input Monitoring/Accessibility permission prompt, which matters since the app otherwise requests no extra system permissions.
+Clipboard History has a global ⌘⇧V shortcut registered via Carbon's `RegisterEventHotKey`, deliberately not `NSEvent.addGlobalMonitor` — Carbon hotkeys don't trigger the Input Monitoring/Accessibility permission prompt, which matters since the only feature that asks for system permissions is the opt-in Gaze Focus (below).
+
+### Gaze Focus (the exception to the module pattern)
+
+`Modules/GazeFocus/` does not follow the five-file poll pattern: it is driven by camera frames, not a poll interval, and is **off by default** (`gazeFocusEnabled`). `GazeCaptureEngine` owns the `AVCaptureSession` + Vision pipeline on its own queues, and `GazeFocusViewModel.start()`/`stop()` must stay non-blocking because `reconcile()` calls them on the main actor every 0.5 s. Decision logic is pure and unit-tested (`GazeCalibrator`/`GazeMapper`, `GazeDwellDecider`, `GazePausePolicy`, `GazeWindowClassifier`); everything touching the camera, Accessibility or windows is in `GazeCaptureEngine` and `GazeSystem`. Calibration overlay windows live in the app target (`GazeFocusCalibrationController`). Read `PRD/gaze-focus.md` and `HANDOFF.md` before changing it — several Vision/Accessibility assumptions were verified there and are not obvious (no yaw angles on macOS 14, no public window→display API, `kAXMain` unsupported).
 
 ### Settings
 

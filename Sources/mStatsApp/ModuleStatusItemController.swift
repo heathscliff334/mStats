@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import mStatsKit
 
 /// Owns one module's `NSStatusItem` + its dropdown `NSPopover`. The status
 /// item's button image is a snapshot of the module's existing SwiftUI
@@ -68,6 +69,11 @@ final class ModuleStatusItemController<Label: View> {
         let prefsItem = NSMenuItem(title: "Preferences…", action: #selector(AppDelegate.showPreferences), keyEquivalent: ",")
         prefsItem.target = NSApp.delegate
         menu.addItem(prefsItem)
+
+        let gazeItem = NSMenuItem(title: "Gaze Focus", action: #selector(AppDelegate.toggleGazeFocus), keyEquivalent: "")
+        gazeItem.target = NSApp.delegate
+        gazeItem.state = AppSettings.shared.gazeFocusEnabled ? .on : .off
+        menu.addItem(gazeItem)
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: "Quit mStats", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
 

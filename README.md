@@ -15,6 +15,7 @@ A native macOS menu bar system monitor, inspired by [iStat Menus](https://bjango
 - 🔌 **Ports** — listening TCP/UDP ports with process/PID, search by name or port, stop (SIGTERM) or force-kill (SIGKILL).
 - 🐳 **Docker** — running/stopped containers with live CPU & memory, start/stop/restart, auto-detects whether the daemon is running.
 - 📋 **Clipboard History** — recent copies with one-click copy-back, global `⌘⇧V` shortcut, and automatic skipping of password-manager/concealed items.
+- 👀 **Gaze Focus** *(experimental, off by default)* — on a multi-display Mac, uses the camera to tell which display you're looking at and moves keyboard focus there after a short glance. Needs Camera and Accessibility access, asked for only when you switch it on; frames are analysed in memory and never stored or sent. Can be toggled from Preferences or any menu bar icon's right-click menu. Build with `./build.sh --sign` so macOS keeps the permissions across rebuilds.
 - 🧩 **Combined icon mode** — collapse every module into a single tabbed menu bar icon instead of one per module.
 
 ## Screenshots
@@ -47,6 +48,7 @@ brew install xcodegen   # one-time
 | `--release` | Build the Release configuration instead of Debug |
 | `--run` | Open the built `.app` once the build succeeds |
 | `--clean` | Remove `./build` before building |
+| `--sign` | Sign with your `Apple Development` identity (auto-detected; override with `MSTATS_SIGN_IDENTITY`) so the signature is stable across rebuilds. Needed for features that request Camera/Accessibility access, since macOS ties those grants to the signature. |
 
 The equivalent manual commands, if you'd rather not use the script:
 

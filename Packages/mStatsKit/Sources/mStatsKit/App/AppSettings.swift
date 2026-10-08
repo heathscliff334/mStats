@@ -64,6 +64,39 @@ public final class AppSettings {
     /// session-only — see ClipboardViewModel), even with privacy exclusions.
     public var clipboardEnabled: Bool { didSet { defaults.set(clipboardEnabled, forKey: Key.clipboardEnabled) } }
 
+    /// Off by default, and the only feature that asks for system permissions
+    /// (Camera + Accessibility), requested lazily when this is first switched
+    /// on. While false nothing runs: no camera session, no Vision work.
+    public var gazeFocusEnabled: Bool { didSet { defaults.set(gazeFocusEnabled, forKey: Key.gazeFocusEnabled) } }
+    /// How long a look must be held before focus moves, in milliseconds.
+    public var gazeFocusDwellMs: Double { didSet { defaults.set(gazeFocusDwellMs, forKey: Key.gazeFocusDwellMs) } }
+    /// Focus never moves within this long of a key press, in milliseconds.
+    public var gazeFocusTypingGuardMs: Double {
+        didSet { defaults.set(gazeFocusTypingGuardMs, forKey: Key.gazeFocusTypingGuardMs) }
+    }
+    /// Focus-only by default: warping the pointer can desync from the real
+    /// cursor position, so it is an explicit opt-in.
+    public var gazeFocusMovePointer: Bool { didSet { defaults.set(gazeFocusMovePointer, forKey: Key.gazeFocusMovePointer) } }
+    public var gazeFocusPauseOnLowPower: Bool {
+        didSet { defaults.set(gazeFocusPauseOnLowPower, forKey: Key.gazeFocusPauseOnLowPower) }
+    }
+    /// Minimum margin between the two nearest displays before a look counts.
+    /// Higher is stricter: fewer false switches, more missed ones.
+    public var gazeFocusMinConfidence: Double {
+        didSet { defaults.set(gazeFocusMinConfidence, forKey: Key.gazeFocusMinConfidence) }
+    }
+    /// JSON-encoded `GazeCalibrationProfile`: feature centroids per display,
+    /// never images.
+    public var gazeFocusCalibrationData: Data? {
+        didSet {
+            if let gazeFocusCalibrationData {
+                defaults.set(gazeFocusCalibrationData, forKey: Key.gazeFocusCalibrationData)
+            } else {
+                defaults.removeObject(forKey: Key.gazeFocusCalibrationData)
+            }
+        }
+    }
+
     /// When true, all enabled modules share a single overview menu bar icon
     /// (switched via tabs) instead of each getting its own status item.
     public var combinedIconEnabled: Bool { didSet { defaults.set(combinedIconEnabled, forKey: Key.combinedIconEnabled) } }
@@ -108,6 +141,13 @@ public final class AppSettings {
         static let dockerEnabled = "dockerEnabled"
         static let clipboardEnabled = "clipboardEnabled"
         static let combinedIconEnabled = "combinedIconEnabled"
+        static let gazeFocusEnabled = "gazeFocusEnabled"
+        static let gazeFocusDwellMs = "gazeFocusDwellMs"
+        static let gazeFocusTypingGuardMs = "gazeFocusTypingGuardMs"
+        static let gazeFocusMovePointer = "gazeFocusMovePointer"
+        static let gazeFocusPauseOnLowPower = "gazeFocusPauseOnLowPower"
+        static let gazeFocusMinConfidence = "gazeFocusMinConfidence"
+        static let gazeFocusCalibrationData = "gazeFocusCalibrationData"
         static let cpuPollInterval = "cpuPollInterval"
         static let memoryPollInterval = "memoryPollInterval"
         static let diskPollInterval = "diskPollInterval"
@@ -143,6 +183,14 @@ public final class AppSettings {
         dockerEnabled = bool(Key.dockerEnabled, default: true)
         clipboardEnabled = bool(Key.clipboardEnabled, default: false)
         combinedIconEnabled = bool(Key.combinedIconEnabled, default: false)
+
+        gazeFocusEnabled = bool(Key.gazeFocusEnabled, default: false)
+        gazeFocusDwellMs = min(max(double(Key.gazeFocusDwellMs, default: 300), 100), 1500)
+        gazeFocusTypingGuardMs = min(max(double(Key.gazeFocusTypingGuardMs, default: 1000), 200), 5000)
+        gazeFocusMovePointer = bool(Key.gazeFocusMovePointer, default: false)
+        gazeFocusPauseOnLowPower = bool(Key.gazeFocusPauseOnLowPower, default: true)
+        gazeFocusMinConfidence = min(max(double(Key.gazeFocusMinConfidence, default: 0.2), 0.02), 0.8)
+        gazeFocusCalibrationData = defaults.data(forKey: Key.gazeFocusCalibrationData)
 
         cpuPollInterval = double(Key.cpuPollInterval, default: 1.0)
         memoryPollInterval = double(Key.memoryPollInterval, default: 2.0)

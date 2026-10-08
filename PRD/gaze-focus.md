@@ -138,8 +138,8 @@ Unsigned or ad-hoc rebuilds can lose Camera/Accessibility grants because macOS t
 ## 12. Phased plan
 
 - **Phase G0 — Prototype & measure:** ~~capture + Vision at 5 fps in a throwaway target~~ **two spikes written, see [`spikes/`](spikes/).** Still outstanding: run the capture protocol ≥ 3 times with real head turns to get a trustworthy `Cohen's d`, and confirm the activation result holds on a third display or a stacked layout.
-- **Phase G0b — Signing:** *new, and blocking.* Establish a stable code signature (see §8 and the §11 risk table). G0 measurement and G1 development both depend on Camera/Accessibility grants surviving a rebuild.
-- **Phase G1 — MVP:** enable/disable (with permission flow and auto-pause), 2-display calibration, dwell + typing guard, focus switching, Preferences section, menu bar state label. Activation must use `NSRunningApplication.activate()` with post-hoc frontmost verification, not `kAXMain` (see §6.5).
+- **Phase G0b — Signing:** *new, and blocking.* **Dev-side done:** `./build.sh --sign` signs with an Apple Development identity so the designated requirement is stable across rebuilds; distribution signing (Developer ID + notarization) is still open. Establish a stable code signature (see §8 and the §11 risk table). G0 measurement and G1 development both depend on Camera/Accessibility grants surviving a rebuild.
+- **Phase G1 — MVP:** **Implemented 2026-10-08, not yet exercised live (see [`HANDOFF.md`](../HANDOFF.md) for what is and isn't verified).** Enable/disable (with permission flow and auto-pause), 2-display calibration, dwell + typing guard, focus switching, Preferences section, menu bar state label. Activation must use `NSRunningApplication.activate()` with post-hoc frontmost verification, not `kAXMain` (see §6.5).
 - **Phase G2 — Polish:** learning from corrections, 3-display support, hotkey toggle, accuracy diagnostics in the card.
 - **Phase G3 — Stretch:** window-level and split-pane focus within a display.
 
@@ -152,10 +152,10 @@ Unsigned or ad-hoc rebuilds can lose Camera/Accessibility grants because macOS t
 
 ## 14. Open questions
 
-1. Is a pointer warp on switch wanted by default, or should focus-only be the default? *Leaning focus-only (see note).* `CGWarpMouseCursorPosition` warps at the HID level and can desync from the real cursor position; it generally needs `CGAssociateMouseAndMouseCursorPosition(true)` around it to stay consistent, and it can be ignored outright in some contexts. Shipping focus-only by default and offering the warp as an explicit opt-in is the lower-risk default.
+1. Is a pointer warp on switch wanted by default, or should focus-only be the default? *Leaning focus-only (see note).* **Provisionally resolved in G1: focus-only by default (`gazeFocusMovePointer` = false).** `CGWarpMouseCursorPosition` warps at the HID level and can desync from the real cursor position; it generally needs `CGAssociateMouseAndMouseCursorPosition(true)` around it to stay consistent, and it can be ignored outright in some contexts. Shipping focus-only by default and offering the warp as an explicit opt-in is the lower-risk default.
 2. Should Low Power Mode auto-pause default on or off?
 3. Should the feature use the built-in camera only, or let the user choose among connected cameras?
-4. Is a combined-icon tab needed for Gaze Focus, or does it live only in Preferences and the right-click menu?
+4. Is a combined-icon tab needed for Gaze Focus, or does it live only in Preferences and the right-click menu? **Provisionally resolved in G1: no tab; it has its own status item (hidden in combined mode), Preferences, and the right-click menu item.**
 5. Do we gate release on Developer ID signing, given the Accessibility/Camera permission persistence issue? **Raised to a G0b blocker** — it gates G0 measurement and G1 development, not just release.
-6. Which app "owns" a display when several have windows on it? Determining the target window needs a policy the document does not yet specify — most-recently-focused app on that display, largest window, or last-active Space.
-7. How should a switch behave during a Space / Mission Control transition? Neither detection nor activation is meaningful mid-transition, and acting anyway produces a visibly wrong result. A guard is needed; it is not currently specced anywhere.
+6. Which app "owns" a display when several have windows on it? Determining the target window needs a policy the document does not yet specify — most-recently-focused app on that display, largest window, or last-active Space. **Provisionally resolved in G1: the front-most layer-0 window on the target display in window-server z-order.**
+7. How should a switch behave during a Space / Mission Control transition? Neither detection nor activation is meaningful mid-transition, and acting anyway produces a visibly wrong result. A guard is needed; it is not currently specced anywhere. **Provisionally resolved in G1: a Space change suppresses switching for 1 s.**

@@ -40,6 +40,40 @@ side-by-side displays has never been measured with the protocol followed. Every
 exploratory run so far had the operator facing forward, so the data is
 meaningless. Everything in G1 depends on this number.
 
+### G1 status (implemented 2026-10-08, **not yet exercised live**)
+
+G1 was built ahead of the measurement, with the feature vector and mapping kept
+swappable (`GazeFeatureVector`, `GazeCalibrator`/`GazeMapper`). It lives in
+`Packages/mStatsKit/Sources/mStatsKit/Modules/GazeFocus/` plus
+`Sources/mStatsApp/GazeFocusCalibrationController.swift`.
+
+Implemented: `gazeFocusEnabled` toggle (Preferences, status-item card, right-click
+menu), lazy Camera → Accessibility permission flow that turns the toggle back off
+and explains why on denial, auto-pause (single/mirrored display, lock, sleep, Low
+Power Mode, camera loss with 5 s retry), 5-point-per-display calibration overlay,
+nearest-centroid mapping (supports >2 displays), dwell + typing guard + noise
+tolerance, Space-change guard, focus switching with post-hoc frontmost verification,
+idle drop to ~2 fps, calibration invalidated on pipeline or display-set change.
+
+**Verified:** 116 unit tests pass (all pure logic and the view model's
+non-camera paths); the app builds signed under Swift 6 strict concurrency; the
+built `Info.plist` carries `NSCameraUsageDescription`.
+
+**Not verified — needs a human at the Mac:** anything that touches the camera or
+real windows. Specifically: the camera/Accessibility prompts and that grants
+survive a `--sign` rebuild; calibration UX and the resulting `separation`;
+whether `AXRaise` actually raises the right window (the G0 spike only proved
+`NSRunningApplication.activate()`); real-world switch accuracy and false-switch
+rate; CPU while active against the <3% budget; and the 2 fps idle path.
+
+Decisions made while building (all open questions in the PRD, resolved
+provisionally): pointer warp defaults **off** (Q1); no combined-icon tab, the
+feature lives in Preferences, its own status item and the right-click menu (Q4);
+the window to focus is the **front-most layer-0 window on the target display in
+window-server z-order** (Q6); a Space change suppresses switching for 1 s (Q7).
+Added a `gazeFocusMinConfidence` "Confidence" setting, which the PRD calls
+"sensitivity".
+
 ### How to run the outstanding measurement
 
 ```bash
@@ -98,7 +132,8 @@ return — AX calls frequently report success while changing nothing.
 `CODE_SIGNING_ALLOWED: NO`. TCC ties Camera/Accessibility grants to the code
 signature's designated requirement, so an unsigned build gets a fresh cdhash
 every rebuild and loses its grants. This blocks G0 measurement and G1
-development — which is why **G0b was added as its own phase**. Untouched so far.
+development — which is why **G0b was added as its own phase**. Dev-side signing is
+now available via `./build.sh --sign` (see §7 step 2); distribution signing is not.
 
 ---
 
@@ -177,16 +212,27 @@ stdout — useful for headless inspection without Console.app.
 
 1. **Run the G0 capture protocol 3+ times** with real head turns. Nothing else
    can be decided without it. Record both the head-yaw and pupil numbers.
-2. **Do G0b — signing.** Pick a build identity (self-signed cert, or Developer ID
-   if enrolment has happened) and wire it through `project.yml` + `build.sh`.
-   Unblocks G1. Independent of step 1, so it can run in parallel.
+2. **G0b — signing: dev-side done, distribution side open.** `./build.sh --sign`
+   signs with the `Apple Development` identity in the login keychain (auto-detected,
+   team read from the cert's `OU`). Verified: the designated requirement is
+   `identifier "com.hartono.mStats" and anchor apple generic and certificate
+   leaf[subject.CN] = "Apple Development: …"` and is identical across a clean
+   rebuild, so TCC grants should persist. **Not yet verified end to end** — no code
+   requests Camera/Accessibility yet, so confirm a grant actually survives a
+   rebuild the first time a spike or G1 code prompts for one. `project.yml` is
+   unchanged (still `CODE_SIGNING_ALLOWED: NO`; `--sign` overrides on the command
+   line), so plain `./build.sh` stays unsigned. Still open: Developer ID +
+   notarization for distribution, and the hardened-runtime camera entitlement
+   that comes with it. Apple Development certs are dev-only.
 3. **Read the numbers, then decide the G1 feature vector.** If pupil offset
    separates materially better than head yaw, the vector should carry both —
    this is the direct answer to the PRD's "head pose is not true gaze" risk row.
    A preliminary (unreliable) run already hinted at this.
-4. **Only then start G1**, and settle the two open design questions first:
-   which app "owns" a display when several have windows on it (open question #6),
-   and how a switch behaves during a Space / Mission Control transition (#7).
+4. **Exercise G1 live** (see "G1 status" above for the checklist): turn Gaze Focus
+   on from a `./build.sh --sign --run` build, calibrate, and try it. If the
+   separation reported after calibration is "Weak", that is the real-world
+   version of the step-1 measurement — retune the feature vector (e.g. weight
+   pupil offset vs head yaw in `GazeCalibrator.distance`) rather than the UI.
 
 ### If you skip ahead to G1 anyway
 
