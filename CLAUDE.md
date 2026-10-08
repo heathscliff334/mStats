@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 mStats is a native macOS menu bar system monitor (SwiftUI + AppKit), inspired by iStat Menus. Each enabled module (CPU, Memory, Disk, Network, Sensors, Battery, Ports, Docker, Clipboard) gets its own live-updating menu bar icon; clicking it opens a dark, card-based dropdown with full detail. See [`PRD/PRD.md`](PRD/PRD.md) for the full product spec and roadmap, and [`README.md`](README.md) for feature status.
 
+**Starting fresh?** Read [`HANDOFF.md`](HANDOFF.md) first — it records the current work in progress (Gaze Focus), the verified platform findings that constrain it, and what is blocked on what.
+
 ## Commands
 
 ```bash
