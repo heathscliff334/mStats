@@ -61,17 +61,41 @@ Follow it exactly or the tool will refuse to conclude anything — see
 | `delivered frames` | Frames the camera produced. Much higher than processed is expected and correct — see throttling note below. |
 | `faces detected` | Detection rate. Below ~80% suggests bad lighting and the yaw estimate will be unreliable. |
 | `CPU (1 core=100%)` | This process's CPU over the run, via `proc_pidinfo`. Comparable to Activity Monitor. |
-| `gap` | Difference in mean yaw between the two displays. The raw signal size. |
+| `gap` | Difference in mean feature value between the two displays. The raw signal size. |
 | `Cohen's d` | The verdict metric. ≥ 2 strong, ≥ 0.8 moderate, below poor. |
 | `in-sample accuracy` | Threshold fitted **and evaluated on the same data**. Optimistic by construction — not evidence for §13's 90% target. |
 
+## Two features per run
+
+Each run reports separability for **two** features at once, because the
+landmarks are already extracted and the second one is free:
+
+- **head yaw** — eye-midpoint minus nose offset. Tracks *head rotation*. This is
+  what the PRD's premise assumes.
+- **pupil offset** — midpoint of the two pupil regions. Adds true *gaze*
+  rotation on top of head rotation.
+
+They answer different questions, and the difference between them is itself the
+answer to PRD §11's "head pose is not true gaze" risk. A run where pupil offset
+separates materially better than head yaw is telling you the eye contributes
+real signal that head pose alone does not capture — which changes what the G1
+feature vector should contain. The tool flags this comparison explicitly.
+
+Pupil regions require the 76-point constellation, which the spike requests. If
+they come back unavailable the run still works and says so.
+
 ## Verdict thresholds
 
-- **PASS** (d ≥ 2) — proceed to G1 on head yaw as specced.
-- **MARGINAL** (0.8 ≤ d < 2) — add pupil offset to the feature vector and re-run
-  before committing to G1.
-- **FAIL** (d < 0.8) — do not build G1 on yaw alone. The §11 risk row "head pose
-  is not true gaze" is the dominant failure mode.
+The printed verdict is based on **head yaw**, because that is what the PRD's
+premise assumes. Read the pupil number alongside it rather than ignoring it.
+
+- **PASS** (yaw d ≥ 2) — proceed to G1 on head yaw as specced.
+- **MARGINAL** (0.8 ≤ yaw d < 2) — if pupil offset scored at least as well,
+  the G1 feature vector should use both. Re-run before committing to G1.
+- **FAIL** (yaw d < 0.8) — do not build G1 on yaw alone. But check the pupil
+  number first: if pupil offset scored ≥ 1 on the same run, the technique may
+  still be viable with a gaze-based feature vector, and this is a `FAIL` for
+  yaw specifically rather than for the feature as a whole.
 
 ## Why it says INCONCLUSIVE
 

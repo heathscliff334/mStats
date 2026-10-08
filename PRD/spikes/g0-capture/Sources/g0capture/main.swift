@@ -56,6 +56,20 @@ struct GazeSample: Sendable {
     /// scalar over them.
     var eyeMidpointOffset: Double
     var noseTipOffset: Double
+    /// Midpoint of the two pupil regions, offset from the face-box centre.
+    ///
+    /// Reported separately rather than folded into `yawRadians` because it
+    /// answers a different question: the eye-midpoint feature tracks *head*
+    /// rotation, while pupils add a smaller amount of true *gaze* rotation.
+    /// Whether that extra signal is worth anything is a separate question
+    /// from whether head yaw separates displays, and conflating them would
+    /// make both harder to read. PRD §6.2 wants pupil positions in the
+    /// feature vector; this is where they land.
+    ///
+    /// Requires the 76-point constellation (see `start(config:)`), and is
+    /// `0` when pupils are unavailable rather than absent, so a run on a
+    /// camera where they are missing still produces comparable numbers.
+    var pupilOffset: Double
     var faceWidth: Double
     var confidence: Float
 }
@@ -107,11 +121,25 @@ enum PoseEstimator {
         let eyeMidOffset = Double(eyeMid.x - 0.5)
         let noseOffset = Double(nose.x - 0.5)
 
+        // Pupil midpoint, when the 76-point constellation populated it.
+        // Falls back to 0 so a run without pupils stays comparable rather
+        // than becoming a different kind of sample.
+        var pupilOffset = 0.0
+        if let leftPupil = centroid(landmarks.leftPupil),
+           let rightPupil = centroid(landmarks.rightPupil) {
+            let pupilMid = CGPoint(
+                x: (leftPupil.x + rightPupil.x) / 2,
+                y: (leftPupil.y + rightPupil.y) / 2
+            )
+            pupilOffset = Double(pupilMid.x - 0.5)
+        }
+
         return GazeSample(
             timestamp: 0,
             yawRadians: eyeMidOffset - noseOffset,
             eyeMidpointOffset: eyeMidOffset,
             noseTipOffset: noseOffset,
+            pupilOffset: pupilOffset,
             faceWidth: Double(boundingBox.width),
             confidence: 1.0
         )
@@ -119,6 +147,16 @@ enum PoseEstimator {
 }
 
 // MARK: - Energy measurement
+
+/// Short label for a Cohen's d value, shared by the per-feature printout and
+/// the verdict so the two can never disagree about a number.
+func verdict(d: Double) -> String {
+    switch d {
+    case 2...: "strongly separable"
+    case 0.8..<2: "moderately separable"
+    default: "poor signal"
+    }
+}
 
 /// Reads cumulative CPU time for this process, in nanoseconds, from IO
 /// power management. Used instead of `powermetrics` because that needs
@@ -165,6 +203,14 @@ struct SeparabilityReport {
     let cohensD: Double
     let bestThreshold: Double
     let accuracy: Double
+    let featureName: String
+}
+
+/// Per-feature separability for one run.
+struct RunAnalysis {
+    let headYaw: SeparabilityReport?
+    let pupil: SeparabilityReport?
+    let sampleCount: Int
 }
 
 enum Separator {
@@ -176,14 +222,31 @@ enum Separator {
     /// is a different outcome from "no separation" and must not be
     /// reported as one. The two cases look identical in a mean/SD printout
     /// but mean completely different things about the feature.
-    static func analyze(allSamples: [GazeSample]) -> SeparabilityReport? {
-        guard allSamples.count >= 20 else { return nil }
+    ///
+    /// Analyzes head yaw and pupil offset in the same pass. Running both
+    /// costs nothing extra — the landmarks are already extracted — and the
+    /// pupil result is the answer to PRD §11's "head pose is not true gaze"
+    /// risk, so it belongs in the same run rather than a follow-up.
+    static func analyze(allSamples: [GazeSample]) -> RunAnalysis {
+        RunAnalysis(
+            headYaw: analyze(samples: allSamples, feature: \.yawRadians, name: "head yaw"),
+            pupil: analyze(samples: allSamples, feature: \.pupilOffset, name: "pupil offset"),
+            sampleCount: allSamples.count
+        )
+    }
 
-        let third = allSamples.count / 3
+    private static func analyze(
+        samples: [GazeSample],
+        feature: KeyPath<GazeSample, Double>,
+        name: String
+    ) -> SeparabilityReport? {
+        guard samples.count >= 20 else { return nil }
+
+        let third = samples.count / 3
         // The middle third is discarded: it is the transition period, where
         // the head is mid-turn and genuinely belongs to neither group.
-        let groupA = allSamples.suffix(third).map(\.yawRadians)
-        let groupB = allSamples.prefix(third).map(\.yawRadians)
+        let groupA = samples.suffix(third).map { $0[keyPath: feature] }
+        let groupB = samples.prefix(third).map { $0[keyPath: feature] }
         guard groupA.count >= 5, groupB.count >= 5 else { return nil }
 
         let meanA = groupA.reduce(0, +) / Double(groupA.count)
@@ -225,7 +288,8 @@ enum Separator {
             groupAN: groupA.count, groupBN: groupB.count,
             groupAMean: meanA, groupBMean: meanB,
             groupASd: sdA, groupBSd: sdB,
-            cohensD: d, bestThreshold: threshold, accuracy: accuracy
+            cohensD: d, bestThreshold: threshold, accuracy: accuracy,
+            featureName: name
         )
     }
 }
@@ -399,7 +463,9 @@ final class CaptureSpike: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             return
         }
 
-        guard let report = Separator.analyze(allSamples: collected) else {
+        let analysis = Separator.analyze(allSamples: collected)
+
+        guard let yawReport = analysis.headYaw else {
             print("\n--- verdict ---")
             if collected.count < 20 {
                 print("INCONCLUSIVE: too few samples to compare groups.")
@@ -419,16 +485,35 @@ final class CaptureSpike: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             return
         }
 
-        print("\n--- yaw separability ---")
-        print(String(format: "display A (last %d)  mean %+.4f  sd %.4f", report.groupAN, report.groupAMean, report.groupASd))
-        print(String(format: "display B (first %d) mean %+.4f  sd %.4f", report.groupBN, report.groupBMean, report.groupBSd))
-        print(String(format: "gap                 %.4f", abs(report.groupAMean - report.groupBMean)))
-        print(String(format: "threshold           %+.4f", report.bestThreshold))
-        print(String(format: "in-sample accuracy  %.0f%%  (optimistic — threshold fitted on the same data)", report.accuracy * 100))
-        print(String(format: "Cohen's d           %.2f", report.cohensD))
+        func report(_ r: SeparabilityReport) {
+            print(String(format: "%@ (n=%d)", r.featureName, r.groupAN + r.groupBN))
+            print(String(format: "  display A (last %d)  mean %+.4f  sd %.4f", r.groupAN, r.groupAMean, r.groupASd))
+            print(String(format: "  display B (first %d) mean %+.4f  sd %.4f", r.groupBN, r.groupBMean, r.groupBSd))
+            print(String(format: "  gap                 %.4f", abs(r.groupAMean - r.groupBMean)))
+            print(String(format: "  threshold           %+.4f", r.bestThreshold))
+            print(String(format: "  in-sample accuracy  %.0f%%  (optimistic — threshold fitted on the same data)", r.accuracy * 100))
+            print(String(format: "  Cohen's d           %.2f  (%@)", r.cohensD, verdict(d: r.cohensD)))
+        }
+
+        print("\n--- separability ---")
+        report(yawReport)
+
+        // The pupil result is reported alongside rather than instead: it
+        // answers PRD §11's "head pose is not true gaze" risk directly, and
+        // costs nothing since the landmarks are already extracted.
+        if let pupilReport = analysis.pupil {
+            print("")
+            report(pupilReport)
+            if pupilReport.cohensD > yawReport.cohensD {
+                print("\n  -> pupil offset separates better than head yaw on this run.")
+                print("     A G1 feature vector using both would beat yaw alone.")
+            }
+        } else {
+            print("\npupil offset: unavailable (needs the 76-point constellation)")
+        }
 
         print("\n--- verdict ---")
-        switch report.cohensD {
+        switch yawReport.cohensD {
         case 2...:
             print("PASS: yaw separates strongly between the two displays.")
             print("Phase G1 can proceed on the head-yaw approach as specced.")
@@ -436,12 +521,22 @@ final class CaptureSpike: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate
             print("target needs a held-out test with a fresh, unfitted threshold.")
         case 0.8..<2:
             print("MARGINAL: some separation, but noisy.")
-            print("Consider adding pupil offset to the feature vector before G1, and")
-            print("re-run with better lighting before committing to G1.")
+            if let pupilReport = analysis.pupil, pupilReport.cohensD >= yawReport.cohensD {
+                print("Pupil offset is at least as strong as yaw on this run — use both")
+                print("in the G1 feature vector, and re-run before committing to G1.")
+            } else {
+                print("Consider adding pupil offset to the feature vector before G1, and")
+                print("re-run with better lighting before committing to G1.")
+            }
         default:
             print("FAIL: head yaw does not separate these displays reliably.")
             print("Do not proceed to G1 on yaw alone. The PRD §11 risk row 'head")
             print("pose is not true gaze' is the dominant failure mode here.")
+            if let pupilReport = analysis.pupil, pupilReport.cohensD >= 1 {
+                print(String(format: "Pupil offset alone scored d=%.2f on this run, so the", pupilReport.cohensD))
+                print("technique may still be viable with a gaze-based feature vector.")
+                print("Re-run a few times before treating this as a true negative.")
+            }
         }
     }
 
